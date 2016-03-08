@@ -9,4 +9,4 @@ crate-type = ["dylib"]
 
 [dependencies]
 libc = "*"
-celix = { path = "../rust-celix" } 
+celix = { git = "https://github.com/RogierWV/rust-celix.git" } 
