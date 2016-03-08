@@ -1,0 +1,12 @@
+[package]
+name = "cargo-celix"
+version = "0.1.0"
+authors = ["Rogier Velting <rogiervelting@gmail.com>"]
+
+[lib]
+crate-type = ["dylib"]
+#crate-type = ["staticlib"]
+
+[dependencies]
+libc = "*"
+celix = { path = "../rust-celix" } 
