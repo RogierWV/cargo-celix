@@ -92,13 +92,13 @@ fn blah() -> i32 {
 
 pub extern "C" fn bundleActivator_create(context_ptr: bundle_context_pt, userData:*mut *mut c_void ) -> celix_status_t {
 	println!("create rust");
-	let mut d = uData {
+	let d = Box::into_raw(Box::new(uData {
 		t1: 12,
 		t2: 100,
 		tx: None,
 		work: &blah,
-	};
-	unsafe { (*userData) = d as *mut _ as *mut c_void; }
+	}));
+	unsafe { (*userData) = d as *mut c_void; }
 	CELIX_SUCCESS
 }
 
