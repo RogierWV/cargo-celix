@@ -15,6 +15,7 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 use std::mem::size_of;
+use std::default::Default;
 
 extern crate celix;
 // #[macro_use]
@@ -35,13 +36,25 @@ pub struct uData {
 	t1: i32,
 	t2: i32,
 	/// A `Sender` for closing the worker thread (cannot drop a dereference of a raw pointer safely!)
-	tx: Sender<()>
+	tx: Sender<()>,
+	work: *const Fn() -> i32
 }
 
 impl uData {
-	/// Unused print method
-	pub fn print(&self, prefix: &str) {
-		println!("{} {}", prefix, self.t1);
+	pub fn work() {
+		println!("Worker function called");
+	}
+}
+
+impl Default for uData {
+	fn default() -> uData {
+		let (tmptx,_) = mpsc::channel();
+		uData {
+			t1:0,
+			t2:0,
+			tx:tmptx,
+			work:&(||{0})
+		}
 	}
 }
 
@@ -56,6 +69,11 @@ uData {{
 	}
 }
 
+fn blah() -> i32 {
+	println!("Working..."); 
+	0
+}
+
 /// Create this bundle
 #[no_mangle]
 #[allow(unused_variables)]
@@ -66,9 +84,23 @@ pub extern "C" fn bundleActivator_create(context_ptr: bundle_context_pt, userDat
 		*userData = malloc(size_of::<uData>()); // C style malloc because the function receives a pointer
 		(*(*userData as *mut uData)).t1 = 12;
 		(*(*userData as *mut uData)).t2 = 100;
+		(*(*userData as *mut uData)).work = & (|| { println!("Working..."); 0 });
+		(*(*userData as *mut uData)).work = &blah; // Both approaches work
 	}
 	CELIX_SUCCESS
 }
+
+// pub extern "C" fn bundleActivator_create(context_ptr: bundle_context_pt, userData: *mut uData) -> celix_status_t {
+// 	println!("create rust");
+// 	let d = uData {
+// 		t1: 12,
+// 		t2: 100,
+// 		work: &blah,
+// 		..Default::default()
+// 	};
+// 	unsafe { (*userData) = d; }
+// 	CELIX_SUCCESS
+// }
 
 /// Start this bundle.
 ///
@@ -85,6 +117,7 @@ pub extern "C" fn bundleActivator_start(userData: *mut c_void, context: bundle_c
 		let (tx, rx) = mpsc::channel();
 		println!("created channel");
 		(*d).tx = tx; // This seems to cause a SIGTRAP without compiler optimisations, will eventually have to find out why
+		(*(*d).work)();
 		thread::spawn(move ||{
 			println!("started thread");
 			// Aditional threads should be created here to allow proper control over them.
@@ -147,6 +180,7 @@ pub extern "C" fn bundleActivator_stop(userData: *mut c_void, context: bundle_co
 	d = userData as *const uData;
 	unsafe { 
 		println!("{:?}", (*d));
+		(*(*d).work)();
 		match (*d).tx.send(()) {
 			Ok(_) => println!("Sent kill signal to worker thread..."),
 			Err(_) => println!("Failed to send kill signal to worker thread..."),
