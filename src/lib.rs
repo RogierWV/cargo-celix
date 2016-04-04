@@ -96,7 +96,10 @@ pub extern "C" fn bundleActivator_create(context_ptr: bundle_context_pt, userDat
 		t1: 12,
 		t2: 100,
 		tx: None,
-		work: &blah,
+		work: &||{
+			println!("working...");
+			0
+		},
 	}));
 	unsafe { (*userData) = d as *mut c_void; }
 	CELIX_SUCCESS
@@ -191,6 +194,7 @@ pub extern "C" fn bundleActivator_stop(userData: *mut c_void, context: bundle_co
 		}
 	}
 	println!("Goodbye {}", unsafe{(*d).t1});
+
 	CELIX_SUCCESS
 }
 
@@ -199,5 +203,6 @@ pub extern "C" fn bundleActivator_stop(userData: *mut c_void, context: bundle_co
 #[allow(unused_variables)]
 pub extern "C" fn bundleActivator_destroy(userData: *mut c_void, context: bundle_context_pt) -> celix_status_t {
 	println!("destroy rust");
+	let _ = unsafe { Box::from_raw(userData as *mut uData) };
 	CELIX_SUCCESS
 }
